@@ -294,3 +294,40 @@ test "problem decoder preserves identifier subproblems" {
   assert_eq(problem.subproblems.length(), 1)
   assert_eq(problem.subproblems[0].identifier.unwrap().value, "bad.example")
 }
+
+///|
+test "renewal planner schedules thirty days before expiry" {
+  let day = 24L * 60L * 60L
+  let decision = @moonacme.plan_renewal(
+    10L * day,
+    0L,
+    90L * day,
+    @moonacme.RenewalPolicy::default(),
+  )
+  assert_eq(decision, @moonacme.RenewalDecision::ScheduleAt(60L * day))
+}
+
+///|
+test "renewal planner honors server suggested window" {
+  let decision = @moonacme.plan_renewal(
+    700L,
+    0L,
+    1000L,
+    { renew_before_seconds: 300L, minimum_lifetime_seconds: 1L, },
+    suggested={ start: 600L, end: 800L, },
+  )
+  assert_eq(
+    decision,
+    @moonacme.RenewalDecision::RenewNow(
+      "inside server suggested renewal window",
+    ),
+  )
+}
+
+///|
+test "renewal planner rejects inverted certificate window" {
+  assert_eq(
+    @moonacme.plan_renewal(10L, 20L, 10L, @moonacme.RenewalPolicy::default()),
+    @moonacme.RenewalDecision::InvalidCertificateWindow,
+  )
+}
