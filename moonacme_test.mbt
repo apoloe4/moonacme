@@ -154,3 +154,54 @@ test "JWS rejects a missing nonce" {
     _ => fail("expected missing nonce")
   }
 }
+
+///|
+test "nonce pool consumes each nonce once" {
+  let pool = @moonacme.NoncePool::new()
+  assert_eq(pool.offer("n-1"), true)
+  assert_eq(pool.offer("n-1"), false)
+  assert_eq(pool.offer("n-2"), true)
+  assert_eq(pool.take(), Some("n-2"))
+  assert_eq(pool.take(), Some("n-1"))
+  assert_eq(pool.take(), None)
+}
+
+///|
+test "Replay-Nonce header lookup is case insensitive" {
+  let nonce = @moonacme.replay_nonce([
+    { name: "content-type", value: "application/json", },
+    { name: "Replay-Nonce", value: "fresh-1", },
+  ])
+  assert_eq(nonce, Some("fresh-1"))
+}
+
+///|
+test "badNonce uses response nonce when present" {
+  let problem : @moonacme.AcmeProblem = {
+    kind: "urn:ietf:params:acme:error:badNonce",
+    title: None,
+    detail: "retry",
+    status: Some(400),
+    instance: None,
+    subproblems: [],
+  }
+  let decision = @moonacme.decide_bad_nonce_retry(
+    problem,
+    Some("fresh-2"),
+    0,
+    @moonacme.RetryPolicy::default(),
+  )
+  assert_true(decision is @moonacme.RetryDecision::RetryNow("fresh-2"))
+}
+
+///|
+test "retry delay is exponential and bounded" {
+  let policy : @moonacme.RetryPolicy = {
+    max_bad_nonce_retries: 3,
+    base_delay_ms: 100,
+    max_delay_ms: 750,
+  }
+  assert_eq(@moonacme.retry_delay_ms(0, policy), 100)
+  assert_eq(@moonacme.retry_delay_ms(2, policy), 400)
+  assert_eq(@moonacme.retry_delay_ms(8, policy), 750)
+}
