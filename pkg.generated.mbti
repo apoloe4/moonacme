@@ -1,0 +1,269 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "apoloe4/moonacme"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn canonical_p256_jwk(BytesView, BytesView) -> String raise AcmeError
+
+pub fn decide_bad_nonce_retry(AcmeProblem, String?, Int, RetryPolicy) -> RetryDecision
+
+pub fn dns01_record_name(String) -> String raise AcmeError
+
+pub fn dns01_txt_value(String, String) -> String raise AcmeError
+
+pub fn encode_new_account(Array[String], Bool) -> String
+
+pub fn encode_new_order(Array[Identifier]) -> String
+
+pub fn http01_path(String) -> String raise AcmeError
+
+pub fn is_bad_nonce(AcmeProblem) -> Bool
+
+pub fn jwk_thumbprint(String) -> String
+
+pub fn key_authorization(String, String) -> String raise AcmeError
+
+pub fn p256_jwk_thumbprint(BytesView, BytesView) -> String raise AcmeError
+
+pub fn plan_renewal(Int64, Int64, Int64, RenewalPolicy, suggested? : RenewalWindow) -> RenewalDecision
+
+pub fn replay_nonce(Array[Header]) -> String?
+
+pub fn retry_delay_ms(Int, RetryPolicy) -> Int
+
+pub fn validate_challenge_token(String) -> Bool
+
+// Errors
+pub(all) suberror AcmeError {
+  Malformed(stage~ : String, detail~ : String)
+  Protocol(problem~ : AcmeProblem)
+  MissingNonce
+  RetryExhausted(attempts~ : Int)
+  InvalidState(expected~ : String, actual~ : String)
+  Unsupported(feature~ : String)
+} derive(Eq, @debug.Debug)
+pub fn AcmeError::message(Self) -> String
+
+// Types and methods
+pub(all) enum AccountBinding {
+  PublicJwk(String)
+  KeyId(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct AcmeProblem {
+  kind : String
+  title : String?
+  detail : String
+  status : Int?
+  instance : String?
+  subproblems : Array[AcmeSubproblem]
+} derive(Eq, @debug.Debug)
+pub fn AcmeProblem::decode(String) -> Self raise AcmeError
+
+pub struct AcmeSession {
+  directory : Directory
+  algorithm : String
+  public_jwk : String
+  mut kid : String?
+  nonces : NoncePool
+}
+pub fn AcmeSession::account_url(Self) -> String?
+pub fn AcmeSession::bind_account(Self, String) -> Unit raise AcmeError
+pub fn AcmeSession::new(directory~ : Directory, algorithm~ : String, public_jwk~ : String) -> Self raise AcmeError
+pub fn AcmeSession::observe_headers(Self, Array[Header]) -> Bool
+pub fn AcmeSession::offer_nonce(Self, String) -> Bool
+pub fn AcmeSession::prepare_challenge_ack(Self, String) -> PreparedRequest raise AcmeError
+pub fn AcmeSession::prepare_download(Self, String) -> PreparedRequest raise AcmeError
+pub fn AcmeSession::prepare_finalize(Self, String, BytesView) -> PreparedRequest raise AcmeError
+pub fn AcmeSession::prepare_new_account(Self, Array[String], Bool) -> PreparedRequest raise AcmeError
+pub fn AcmeSession::prepare_new_order(Self, Array[Identifier]) -> PreparedRequest raise AcmeError
+pub fn AcmeSession::prepare_post_as_get(Self, String, accept? : String) -> PreparedRequest raise AcmeError
+pub fn AcmeSession::prepare_revoke(Self, BytesView) -> PreparedRequest raise AcmeError
+
+pub(all) struct AcmeSubproblem {
+  kind : String
+  detail : String
+  identifier : Identifier?
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Authorization {
+  url : String
+  identifier : Identifier
+  status : ResourceStatus
+  expires : String?
+  wildcard : Bool
+  challenges : Array[Challenge]
+} derive(Eq, @debug.Debug)
+pub fn Authorization::decode(String, url~ : String) -> Self raise AcmeError
+pub fn Authorization::find_challenge(Self, ChallengeKind) -> Challenge?
+pub fn Authorization::next_action(Self) -> AuthorizationAction raise AcmeError
+
+pub(all) enum AuthorizationAction {
+  Provision(Array[Challenge])
+  PollAuthorization(String)
+  AuthorizationComplete
+  AuthorizationStopped(AcmeProblem?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Challenge {
+  kind : ChallengeKind
+  url : String
+  status : ResourceStatus
+  token : String
+  validated : String?
+  problem : AcmeProblem?
+} derive(Eq, @debug.Debug)
+pub fn Challenge::decode(String) -> Self raise AcmeError
+
+pub(all) enum ChallengeKind {
+  Http01
+  Dns01
+  TlsAlpn01
+  Other(String)
+} derive(Eq, @debug.Debug)
+pub fn ChallengeKind::parse(String) -> Self
+pub fn ChallengeKind::text(Self) -> String
+
+pub(all) struct CsrDraft {
+  request_info_der : Bytes
+} derive(Eq, @debug.Debug)
+pub fn CsrDraft::finish_ecdsa_sha256(Self, BytesView) -> Bytes raise AcmeError
+pub fn CsrDraft::new(String, Array[String], BytesView) -> Self raise AcmeError
+pub fn CsrDraft::signing_input(Self) -> BytesView
+
+pub(all) struct Directory {
+  new_nonce : String
+  new_account : String
+  new_order : String
+  revoke_cert : String
+  key_change : String
+  renewal_info : String?
+  terms_of_service : String?
+  website : String?
+  external_account_required : Bool
+} derive(Eq, @debug.Debug)
+pub fn Directory::decode(String) -> Self raise AcmeError
+
+pub(all) struct Header {
+  name : String
+  value : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Http01Resource {
+  path : String
+  body : String
+  content_type : String
+} derive(Eq, @debug.Debug)
+pub fn Http01Resource::new(String, String) -> Self raise AcmeError
+
+pub(all) struct HttpRequest {
+  verb : String
+  url : String
+  headers : Array[Header]
+  body : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct Identifier {
+  kind : String
+  value : String
+} derive(Eq, @debug.Debug)
+
+pub(all) struct JwsDraft {
+  protected_b64 : String
+  payload_b64 : String
+  signing_input : String
+} derive(Eq, @debug.Debug)
+pub fn JwsDraft::finish(Self, BytesView) -> String raise AcmeError
+pub fn JwsDraft::new(algorithm~ : String, nonce~ : String, url~ : String, payload~ : String, binding~ : AccountBinding) -> Self raise AcmeError
+pub fn JwsDraft::post_as_get(algorithm~ : String, nonce~ : String, url~ : String, kid~ : String) -> Self raise AcmeError
+
+pub struct NoncePool {
+  values : Array[String]
+}
+pub fn NoncePool::clear(Self) -> Unit
+pub fn NoncePool::length(Self) -> Int
+pub fn NoncePool::new() -> Self
+pub fn NoncePool::offer(Self, String) -> Bool
+pub fn NoncePool::take(Self) -> String?
+
+pub(all) struct Order {
+  url : String
+  status : ResourceStatus
+  identifiers : Array[Identifier]
+  authorization_urls : Array[String]
+  finalize_url : String
+  certificate_url : String?
+  expires : String?
+  problem : AcmeProblem?
+} derive(Eq, @debug.Debug)
+pub fn Order::decode(String, url~ : String) -> Self raise AcmeError
+pub fn Order::next_action(Self) -> OrderAction raise AcmeError
+
+pub(all) enum OrderAction {
+  FetchAuthorizations(Array[String])
+  Finalize(String)
+  Poll(String)
+  DownloadCertificate(String)
+  Stop(AcmeProblem?)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct PreparedRequest {
+  verb : String
+  url : String
+  draft : JwsDraft
+  accept : String
+} derive(Eq, @debug.Debug)
+pub fn PreparedRequest::finish(Self, BytesView) -> HttpRequest raise AcmeError
+
+pub(all) enum RenewalDecision {
+  NotYetValid
+  RenewNow(String)
+  ScheduleAt(Int64)
+  InvalidCertificateWindow
+  InvalidRenewalWindow
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RenewalPolicy {
+  renew_before_seconds : Int64
+  minimum_lifetime_seconds : Int64
+} derive(Eq, @debug.Debug)
+pub fn RenewalPolicy::default() -> Self
+
+pub(all) struct RenewalWindow {
+  start : Int64
+  end : Int64
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ResourceStatus {
+  Pending
+  Ready
+  Processing
+  Valid
+  Invalid
+  Deactivated
+  Revoked
+  Expired
+  Unknown(String)
+} derive(Eq, @debug.Debug)
+pub fn ResourceStatus::parse(String) -> Self
+pub fn ResourceStatus::text(Self) -> String
+
+pub(all) enum RetryDecision {
+  RetryNow(String)
+  FetchFreshNonce
+  Stop(AcmeError)
+} derive(Eq, @debug.Debug)
+
+pub(all) struct RetryPolicy {
+  max_bad_nonce_retries : Int
+  base_delay_ms : Int
+  max_delay_ms : Int
+} derive(Eq, @debug.Debug)
+pub fn RetryPolicy::default() -> Self
+
+// Type aliases
+
+// Traits

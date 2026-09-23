@@ -55,16 +55,21 @@ moon run cmd/main -- http01-body TOKEN ACCOUNT_JWK_THUMBPRINT
 
 The same operations are available as library calls:
 
-```moonbit
+```moonbit nocheck
+///|
 let record = @moonacme.dns01_record_name("*.example.com")
+
+///|
 let value = @moonacme.dns01_txt_value(token, account_thumbprint)
+
+///|
 let resource = @moonacme.Http01Resource::new(token, account_thumbprint)
 ```
 
 An `AcmeSession` consumes each replay nonce once and prepares a request whose
 signing input can be sent to any signer:
 
-```moonbit
+```moonbit nocheck
 let session = @moonacme.AcmeSession::new(
   directory~,
   algorithm="ES256",
