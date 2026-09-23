@@ -66,3 +66,34 @@ test "malformed directory is rejected" {
     _ => fail("expected malformed directory")
   }
 }
+
+///|
+test "HTTP-01 resource uses the well-known path" {
+  let token = "LoqXcYV8q5ONbR2H3wq5wg"
+  let resource = @moonacme.Http01Resource::new(token, "thumbprint")
+  assert_eq(resource.path, "/.well-known/acme-challenge/" + token)
+  assert_eq(resource.body, token + ".thumbprint")
+}
+
+///|
+test "DNS-01 vector hashes key authorization" {
+  let value = @moonacme.dns01_txt_value("LoqXcYV8q5ONbR2H3wq5wg", "thumbprint")
+  assert_eq(value, "DgIXTOEwHQ4sMRiB-TPIe2UYP5rbdQEs1wvRjoHZVZU")
+}
+
+///|
+test "DNS-01 removes wildcard label from owner name" {
+  assert_eq(
+    @moonacme.dns01_record_name("*.example.com"),
+    "_acme-challenge.example.com",
+  )
+}
+
+///|
+test "challenge token rejects padding and short values" {
+  assert_eq(@moonacme.validate_challenge_token("short"), false)
+  assert_eq(
+    @moonacme.validate_challenge_token("LoqXcYV8q5ONbR2H3wq5wg="),
+    false,
+  )
+}

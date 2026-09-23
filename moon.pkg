@@ -2,4 +2,7 @@ warnings = "-implicit_impl_as_method"
 
 import {
   "moonbitstack/moonjson/json",
+  "moonbitstack/moonbase/base64",
+  "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitlang/core/encoding/utf8",
 }
