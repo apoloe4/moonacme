@@ -205,3 +205,67 @@ test "retry delay is exponential and bounded" {
   assert_eq(@moonacme.retry_delay_ms(2, policy), 400)
   assert_eq(@moonacme.retry_delay_ms(8, policy), 750)
 }
+
+///|
+fn test_directory() -> @moonacme.Directory {
+  {
+    new_nonce: "https://ca.test/nonce",
+    new_account: "https://ca.test/account",
+    new_order: "https://ca.test/order",
+    revoke_cert: "https://ca.test/revoke",
+    key_change: "https://ca.test/key-change",
+    renewal_info: None,
+    terms_of_service: None,
+    website: None,
+    external_account_required: false,
+  }
+}
+
+///|
+test "session plans account then order with distinct nonces" {
+  let session = @moonacme.AcmeSession::new(
+    directory=test_directory(),
+    algorithm="ES256",
+    public_jwk="{\"crv\":\"P-256\",\"kty\":\"EC\",\"x\":\"x\",\"y\":\"y\"}",
+  )
+  assert_eq(session.offer_nonce("nonce-account"), true)
+  let account = session.prepare_new_account(["mailto:admin@example.com"], true)
+  assert_eq(account.url, "https://ca.test/account")
+  session.bind_account("https://ca.test/account/1")
+  assert_eq(session.offer_nonce("nonce-order"), true)
+  let order = session.prepare_new_order([{ kind: "dns", value: "example.com", }])
+  assert_eq(order.url, "https://ca.test/order")
+  assert_eq(session.account_url(), Some("https://ca.test/account/1"))
+}
+
+///|
+test "session refuses KID operation before registration" {
+  let session = @moonacme.AcmeSession::new(
+    directory=test_directory(),
+    algorithm="ES256",
+    public_jwk="{\"crv\":\"P-256\",\"kty\":\"EC\",\"x\":\"x\",\"y\":\"y\"}",
+  )
+  session.offer_nonce("nonce-order") |> ignore
+  try
+    session.prepare_new_order([{ kind: "dns", value: "example.com", }])
+    |> ignore
+  catch {
+    @moonacme.AcmeError::InvalidState(..) => ()
+    _ => fail("unexpected error")
+  } noraise {
+    _ => fail("expected invalid state")
+  }
+}
+
+///|
+test "finished request has ACME content type" {
+  let session = @moonacme.AcmeSession::new(
+    directory=test_directory(),
+    algorithm="ES256",
+    public_jwk="{\"crv\":\"P-256\",\"kty\":\"EC\",\"x\":\"x\",\"y\":\"y\"}",
+  )
+  session.offer_nonce("nonce-account") |> ignore
+  let request = session.prepare_new_account([], true).finish(b"signature"[:])
+  assert_eq(request.verb, "POST")
+  assert_eq(request.headers[0].value, "application/jose+json")
+}
