@@ -358,3 +358,50 @@ test "CSR draft rejects an empty SAN list" {
     _ => fail("expected malformed CSR")
   }
 }
+
+///|
+test "order workflow advances from authorization to finalization" {
+  let pending = @moonacme.Order::decode(
+    (
+      #|{"status":"pending","identifiers":[{"type":"dns","value":"example.com"}],"authorizations":["https://ca.test/authz/1"],"finalize":"https://ca.test/finalize/1"}
+    ),
+    url="https://ca.test/order/1",
+  )
+  assert_true(
+    pending.next_action() is @moonacme.OrderAction::FetchAuthorizations(_),
+  )
+  let ready = { ..pending, status: @moonacme.ResourceStatus::Ready, }
+  assert_eq(
+    ready.next_action(),
+    @moonacme.OrderAction::Finalize("https://ca.test/finalize/1"),
+  )
+}
+
+///|
+test "valid order points to certificate download" {
+  let order = @moonacme.Order::decode(
+    (
+      #|{"status":"valid","identifiers":[{"type":"dns","value":"example.com"}],"authorizations":[],"finalize":"https://ca.test/finalize/1","certificate":"https://ca.test/cert/1"}
+    ),
+    url="https://ca.test/order/1",
+  )
+  assert_eq(
+    order.next_action(),
+    @moonacme.OrderAction::DownloadCertificate("https://ca.test/cert/1"),
+  )
+}
+
+///|
+test "authorization workflow offers pending challenges" {
+  let authorization = @moonacme.Authorization::decode(
+    (
+      #|{"identifier":{"type":"dns","value":"example.com"},"status":"pending","challenges":[{"type":"dns-01","url":"https://ca.test/challenge/1","status":"pending","token":"LoqXcYV8q5ONbR2H3wq5wg"}]}
+    ),
+    url="https://ca.test/authz/1",
+  )
+  match authorization.next_action() {
+    @moonacme.AuthorizationAction::Provision(challenges) =>
+      assert_eq(challenges[0].kind, @moonacme.ChallengeKind::Dns01)
+    _ => fail("expected challenge provisioning")
+  }
+}
