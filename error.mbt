@@ -26,3 +26,18 @@ pub(all) suberror AcmeError {
   InvalidState(expected~ : String, actual~ : String)
   Unsupported(feature~ : String)
 } derive(Eq, Debug)
+
+///|
+/// Stable human-readable text for logs and command-line adapters.
+pub fn AcmeError::message(self : AcmeError) -> String {
+  match self {
+    Malformed(stage~, detail~) => stage + ": " + detail
+    Protocol(problem~) => problem.detail
+    MissingNonce => "no replay nonce is available"
+    RetryExhausted(attempts~) =>
+      "retry limit reached after \{attempts} attempts"
+    InvalidState(expected~, actual~) =>
+      "expected " + expected + ", got " + actual
+    Unsupported(feature~) => "unsupported: " + feature
+  }
+}
