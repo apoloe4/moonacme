@@ -1,6 +1,6 @@
 # Roadmap
 
-## 0.1 acceptance target
+## 0.1 implemented
 
 - Typed RFC 8555 resource models and strict JSON codecs.
 - Replay-Nonce tracking and `badNonce` retry planning.
@@ -9,12 +9,13 @@
   revocation request planning.
 - HTTP-01 and DNS-01 key authorization helpers.
 - PKCS#10 CSR construction for P-256 keys.
-- Framework-neutral HTTP transport and challenge-provider contracts.
-- Deterministic scripted conformance tests and malformed-input tests.
-- Native command-line inspection and challenge helper commands.
+- Framework-neutral prepared HTTP requests and challenge values.
+- Deterministic protocol, state-transition, and malformed-input tests.
+- Portable command-line challenge helper commands.
 
 ## Later releases
 
 - Ready-made asynchronous HTTP transport.
 - DNS provider packages maintained independently from the protocol core.
 - ACME Renewal Information support after the RFC surface stabilizes.
+- Pebble end-to-end interoperability tests.
