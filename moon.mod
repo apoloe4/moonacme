@@ -24,3 +24,9 @@ keywords = [ "acme", "tls", "certificate", "rfc8555", "letsencrypt" ]
 preferred_target = "wasm"
 
 description = "Transport-neutral ACME certificate automation for MoonBit"
+
+import {
+  "moonbitstack/moonjson@0.4.0",
+  "moonbitstack/moonbase@0.4.0",
+  "moonbitstack/mooncrypt@0.3.1",
+}

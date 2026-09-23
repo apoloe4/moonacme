@@ -1,1 +1,5 @@
 warnings = "-implicit_impl_as_method"
+
+import {
+  "moonbitstack/moonjson/json",
+}
