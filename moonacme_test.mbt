@@ -269,3 +269,28 @@ test "finished request has ACME content type" {
   assert_eq(request.verb, "POST")
   assert_eq(request.headers[0].value, "application/jose+json")
 }
+
+///|
+test "authorization decoder selects HTTP challenge" {
+  let authorization = @moonacme.Authorization::decode(
+    (
+      #|{"identifier":{"type":"dns","value":"example.com"},"status":"pending","wildcard":false,"challenges":[{"type":"http-01","url":"https://ca.test/challenge/1","status":"pending","token":"LoqXcYV8q5ONbR2H3wq5wg"},{"type":"dns-01","url":"https://ca.test/challenge/2","status":"pending","token":"LoqXcYV8q5ONbR2H3wq5wg"}]}
+    ),
+    url="https://ca.test/authz/1",
+  )
+  let challenge = authorization.find_challenge(@moonacme.ChallengeKind::Http01)
+  assert_true(challenge is Some(_))
+  assert_eq(challenge.unwrap().url, "https://ca.test/challenge/1")
+}
+
+///|
+test "problem decoder preserves identifier subproblems" {
+  let problem = @moonacme.AcmeProblem::decode(
+    (
+      #|{"type":"urn:ietf:params:acme:error:malformed","detail":"one identifier failed","status":400,"subproblems":[{"type":"urn:ietf:params:acme:error:rejectedIdentifier","detail":"not allowed","identifier":{"type":"dns","value":"bad.example"}}]}
+    ),
+  )
+  assert_eq(problem.status, Some(400))
+  assert_eq(problem.subproblems.length(), 1)
+  assert_eq(problem.subproblems[0].identifier.unwrap().value, "bad.example")
+}
