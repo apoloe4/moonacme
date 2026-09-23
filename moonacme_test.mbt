@@ -97,3 +97,60 @@ test "challenge token rejects padding and short values" {
     false,
   )
 }
+
+///|
+test "JWS draft exposes exact signing input" {
+  let draft = @moonacme.JwsDraft::new(
+    algorithm="ES256",
+    nonce="nonce-1",
+    url="https://ca.test/new-account",
+    payload="{\"termsOfServiceAgreed\":true}",
+    binding=@moonacme.AccountBinding::PublicJwk(
+      "{\"kty\":\"EC\",\"crv\":\"P-256\",\"x\":\"x\",\"y\":\"y\"}",
+    ),
+  )
+  assert_eq(draft.signing_input, draft.protected_b64 + "." + draft.payload_b64)
+  assert_true(draft.payload_b64.length() > 0)
+}
+
+///|
+test "POST-as-GET has an empty encoded payload" {
+  let draft = @moonacme.JwsDraft::post_as_get(
+    algorithm="ES256",
+    nonce="nonce-2",
+    url="https://ca.test/order/1",
+    kid="https://ca.test/account/7",
+  )
+  assert_eq(draft.payload_b64, "")
+  assert_true(draft.signing_input.has_suffix("."))
+}
+
+///|
+test "JWS body encodes raw signature without padding" {
+  let draft = @moonacme.JwsDraft::post_as_get(
+    algorithm="ES256",
+    nonce="nonce-3",
+    url="https://ca.test/order/1",
+    kid="https://ca.test/account/7",
+  )
+  let body = draft.finish(b"abc"[:])
+  assert_true(body.contains("\"signature\":\"YWJj\""))
+}
+
+///|
+test "JWS rejects a missing nonce" {
+  try
+    @moonacme.JwsDraft::post_as_get(
+      algorithm="ES256",
+      nonce="",
+      url="https://ca.test/order/1",
+      kid="https://ca.test/account/7",
+    )
+    |> ignore
+  catch {
+    @moonacme.AcmeError::MissingNonce => ()
+    _ => fail("unexpected error")
+  } noraise {
+    _ => fail("expected missing nonce")
+  }
+}
