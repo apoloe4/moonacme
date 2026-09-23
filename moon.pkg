@@ -4,5 +4,6 @@ import {
   "moonbitstack/moonjson/json",
   "moonbitstack/moonbase/base64",
   "moonbitstack/mooncrypt/hash/sha2",
+  "moonbitstack/mooncrypt/asn1",
   "moonbitlang/core/encoding/utf8",
 }

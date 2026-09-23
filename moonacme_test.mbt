@@ -331,3 +331,30 @@ test "renewal planner rejects inverted certificate window" {
     @moonacme.RenewalDecision::InvalidCertificateWindow,
   )
 }
+
+///|
+test "CSR draft exposes exact signing input and builds DER" {
+  // Minimal DER-shaped SPKI fixture; the CSR builder deliberately treats it
+  // as opaque so callers can use any standards-compliant certificate key.
+  let draft = @moonacme.CsrDraft::new(
+    "example.com",
+    ["example.com", "www.example.com"],
+    b"\x30\x03\x01\x01\x00"[:],
+  )
+  assert_eq(draft.signing_input()[0], b'\x30')
+  let csr = draft.finish_ecdsa_sha256(b"\x30\x02\x01\x00"[:])
+  assert_eq(csr[0], b'\x30')
+  assert_true(csr.length() > draft.signing_input().length())
+}
+
+///|
+test "CSR draft rejects an empty SAN list" {
+  try
+    @moonacme.CsrDraft::new("example.com", [], b"\x30\x00"[:]) |> ignore
+  catch {
+    @moonacme.AcmeError::Malformed(..) => ()
+    _ => fail("unexpected error")
+  } noraise {
+    _ => fail("expected malformed CSR")
+  }
+}
