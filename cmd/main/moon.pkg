@@ -1,0 +1,7 @@
+// import {
+//   "apoloe4/moonacme" @lib,
+// }
+
+pkgtype(kind: "executable")
+
+warnings = "-implicit_impl_as_method"

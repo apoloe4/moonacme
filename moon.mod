@@ -19,8 +19,8 @@ repository = "https://github.com/apoloe4/moonacme"
 
 license = "Apache-2.0"
 
-keywords = ["acme", "tls", "certificate", "rfc8555", "letsencrypt"]
+keywords = [ "acme", "tls", "certificate", "rfc8555", "letsencrypt" ]
 
-preferred_target = "native"
+preferred_target = "wasm"
 
 description = "Transport-neutral ACME certificate automation for MoonBit"
