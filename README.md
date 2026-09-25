@@ -1,41 +1,30 @@
 # MoonACME
 
-MoonACME is a portable implementation of the Automatic Certificate Management
-Environment protocol ([RFC 8555](https://www.rfc-editor.org/rfc/rfc8555.html))
-for MoonBit. It gives native, JavaScript, and WebAssembly applications the
-protocol pieces needed to obtain and renew TLS certificates without invoking
-Certbot or binding the application to one HTTP client, DNS provider, clock, or
-private-key store.
+MoonACME 是使用 MoonBit 实现的可移植 ACME（自动证书管理环境）协议核心，遵循 [RFC 8555](https://www.rfc-editor.org/rfc/rfc8555.html)。它为原生、JavaScript 和 WebAssembly 应用提供申请与续期 TLS 证书所需的协议能力，无需调用 Certbot，也不绑定特定的 HTTP 客户端、DNS 服务商、时钟或私钥存储方案。
 
-The 0.1 API covers the complete request-planning path: directory discovery,
-accounts, orders, authorizations, HTTP-01 and DNS-01 challenges, replay nonces,
-flattened JWS, `badNonce` retries, PKCS#10 CSR creation, finalization,
-certificate download, revocation, and deterministic renewal scheduling.
+当前 0.1 版覆盖完整的请求规划流程：目录发现、账户、订单、授权、HTTP-01 与 DNS-01 挑战、重放随机数、扁平化 JWS、`badNonce` 重试、PKCS#10 CSR 生成、订单终结、证书下载、证书吊销和确定性续期调度。
 
-## Why a protocol core?
+## 为什么需要协议核心？
 
-MoonBit web servers can already load certificate files, and cryptography
-packages can already produce hashes and signatures. The missing layer is the
-ACME state machine that connects those parts safely. MoonACME keeps that layer
-small and reusable while leaving network and secret-key policy to the host.
+MoonBit Web 服务器已经能够加载证书文件，密码学包也能够生成哈希和签名；生态中缺少的是把这些部件安全连接起来的 ACME 状态机。MoonACME 专注于这一层，将网络访问和私钥策略交给宿主应用，从而保持核心库小巧、可复用，并适配不同运行目标。
 
 ```mermaid
 flowchart LR
-  App[MoonBit application] --> Session[AcmeSession]
-  Session --> JWS[JWS and nonce engine]
-  Session --> Flow[order workflow]
-  Flow --> Challenge[HTTP-01 / DNS-01 values]
-  Flow --> CSR[PKCS#10 builder]
-  App --> Transport[host HTTP adapter]
-  App --> Signer[HSM / keystore / signer]
-  Transport --> CA[ACME server]
+  App[MoonBit 应用] --> Session[AcmeSession]
+  Session --> JWS[JWS 与 nonce 引擎]
+  Session --> Flow[订单工作流]
+  Flow --> Challenge[HTTP-01 / DNS-01 挑战值]
+  Flow --> CSR[PKCS#10 构建器]
+  App --> Transport[宿主 HTTP 适配器]
+  App --> Signer[HSM / 密钥库 / 签名器]
+  Transport --> CA[ACME 服务器]
   Signer --> JWS
   Signer --> CSR
 ```
 
-## Quick start
+## 快速开始
 
-Clone the repository and run the strict suite:
+克隆仓库并运行严格测试：
 
 ```sh
 git clone https://github.com/apoloe4/moonacme.git
@@ -44,7 +33,7 @@ moon update
 moon test --deny-warn --target wasm
 ```
 
-Generate challenge material from the bundled helper:
+使用内置命令生成挑战材料：
 
 ```sh
 moon run cmd/main -- dns01-name '*.example.com'
@@ -53,7 +42,7 @@ moon run cmd/main -- http01-path TOKEN
 moon run cmd/main -- http01-body TOKEN ACCOUNT_JWK_THUMBPRINT
 ```
 
-The same operations are available as library calls:
+这些能力也可以直接作为库函数调用：
 
 ```moonbit nocheck
 ///|
@@ -66,8 +55,7 @@ let value = @moonacme.dns01_txt_value(token, account_thumbprint)
 let resource = @moonacme.Http01Resource::new(token, account_thumbprint)
 ```
 
-An `AcmeSession` consumes each replay nonce once and prepares a request whose
-signing input can be sent to any signer:
+`AcmeSession` 会确保每个重放随机数只使用一次，并生成可交给任意签名器处理的签名输入：
 
 ```moonbit nocheck
 let session = @moonacme.AcmeSession::new(
@@ -81,27 +69,28 @@ let signature = account_signer(draft.draft.signing_input)
 let request = draft.finish(signature[:])
 ```
 
-After decoding an order, call `order.next_action()` to obtain one of
-`FetchAuthorizations`, `Finalize`, `Poll`, `DownloadCertificate`, or `Stop`.
-The host executes that effect, feeds the next response back into the library,
-and can persist the action between runs.
+解析订单后，调用 `order.next_action()` 可得到 `FetchAuthorizations`、`Finalize`、`Poll`、`DownloadCertificate` 或 `Stop`。宿主应用负责执行相应操作，把响应交回库中，并可在多次运行之间持久化待执行动作。
 
-## Design guarantees
+## 设计保证
 
-- Strict decoders report the field and stage that failed.
-- Unknown status and challenge strings are preserved for forward compatibility.
-- Nonces are consumed exactly once and `badNonce` retries are bounded.
-- JWS and JSON output is deterministic and base64url padding is omitted.
-- Private keys never enter protocol models or debug output.
-- Time is injected into renewal planning, so tests and schedulers agree.
-- The same suite runs on `wasm`, `wasm-gc`, `js`, and `native` in CI.
+- 严格解码器会报告失败字段及所在阶段。
+- 保留未知状态和挑战类型，便于向前兼容。
+- nonce 只消费一次，`badNonce` 重试次数有明确上限。
+- JWS 与 JSON 输出具有确定性，Base64URL 编码不包含填充字符。
+- 私钥不会进入协议模型或调试输出。
+- 续期规划使用注入的时间，使测试、调度器和生产行为保持一致。
+- 同一套测试会在 CI 中覆盖 `wasm`、`wasm-gc`、`js` 和 `native` 目标。
 
-## Project status
+## 项目状态
 
-MoonACME 0.1 is suitable for building and testing ACME integrations. It has a
-transport-neutral API and does not yet ship a ready-made HTTP client, DNS
-provider plugin, or Pebble interoperability job. See [Roadmap](docs/ROADMAP.md),
-[protocol guide](docs/PROTOCOL.md), [security model](docs/SECURITY.md), and
-[testing notes](docs/TESTING.md).
+MoonACME 0.1 可用于构建和测试 ACME 集成。当前提供与传输层无关的 API，尚未内置可直接使用的 HTTP 客户端、DNS 服务商插件或 Pebble 互操作任务。
 
-Licensed under Apache-2.0.
+进一步资料：
+
+- [开发路线图](docs/ROADMAP.md)
+- [协议指南](docs/PROTOCOL.md)
+- [安全模型](docs/SECURITY.md)
+- [测试说明](docs/TESTING.md)
+- [比赛项目申报书](docs/PROJECT_PROPOSAL.md)
+
+本项目采用 Apache-2.0 许可证。
